@@ -1,0 +1,42 @@
+{
+	"name": "bfpm",
+	"preferGlobal": true,
+	"version": "1.0.0",
+	"author": "Giovanny Andres Gongora Granada",
+	"description": "A package manager for installing Bricks addons and compiling Bricks Framework.",
+	"homepage": "https://github.com/BricksFramework/bricks-package-manager",
+	"dependencies": {
+		"grunt": "~0.4.1",
+	    "grunt-contrib-concat": "~0.3.0",
+	    "grunt-contrib-uglify": "~0.2.5",
+	    "grunt-contrib-cssmin": "~0.6.2",
+	    "grunt-contrib-copy": "~0.5.0",
+	    "grunt-contrib-clean": "~0.5.0",
+	    "grunt-contrib-sass": "~0.7.2",
+	    "grunt-contrib-compress": "~0.9.1",
+	    "grunt-contrib-watch": "~0.5.3",
+	    "grunt-contrib-connect": "~0.6.0",
+	    "grunt-contrib-jshint": "~0.8.0"
+	},
+	"devDependencies": {},
+	"bin": {
+		"bfpm": "./run/bfpm"
+	},
+	"main": "./lib/main.js",
+	"engines": {
+		"node": ">=0.10"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/BricksFramework/bricks-package-manager.git"
+	},
+	"keywords": [
+		"bricks",
+		"bricksframework",
+		"framework",
+		"install",
+		"compile",
+		"cli",
+		"manager"
+	]
+}

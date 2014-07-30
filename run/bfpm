@@ -1,0 +1,218 @@
+#!/usr/bin/env node
+
+var BFPM, bricksPM, pb, bar, dest, events, fa, fs, opt, parts, path, program, run, scripts, timer, utils, _;
+timer = new Date;
+
+bricksPM = require('../lib/main');
+pb = require('progress');
+_ = require("underscore");
+program = require('commander');
+fs = require('fs');
+utils = require('../lib/utils');
+path = require('path');
+
+/* package parameters*/
+program
+  .version('1.0.0')
+  .usage('[options] <dir>')
+  .option('-j, --js', 'Add Javascript')
+  .option('-c, --css', 'Add CSS')
+  .option('-l, --less', 'Add Less')
+  .option('-i, --img', 'Add Images')
+  .option('-a, --font-awesome', "Add Font Awesome")
+  .option('-t, --theme <name>', "Mixin in a free Bootswatch theme. See http://bootswatch.com/ for full list.")
+  .option('-v, --variables <path>', "Path to a custom `variables.less` file to replace the included version.")
+  .option('-f, --font-path <path>', "Set a custom value for the less variable `@FontAwesomePath` for a custom css font path when using Font Awesome.")
+  .option('-s, --script <paths>', "Include javascript files (seperated by commas) with custom runtime instructions.")
+  .option('-x, --compress', "Compress JS and CSS and include as  an extra \"*.min.*\" file.")
+  .option('--compress-js', "Compress JS with UglifyJs and include as an extra \"*.min.js\" file.")
+  .option('--compress-css', "Compress CSS with lessc (YUI) and include as an extra \"*.min.css\" file.")
+  .option('--no-concat', "Don't concat Javascript files together.")
+  .option('--bootstrap-version <version>', "Specific Bootstrap version to use. See http://github.com/twitter/bootstrap/tags for full list.");
+program.on('--help', function() {
+  console.log('  Note: The default is to include all javascript, css, images and less unless you include at least one of the options `-j`, `-c`, `-l`, or `-i`, in which case only those specified are included.');
+  return console.log('');
+});
+program.parse(process.argv);
+
+/* options */
+opt = {};
+opt.version = "master";
+
+if (program.bootstrapVersion) {
+  opt.version = program.bootstrapVersion;
+}
+
+if (opt.version !== "master" && opt.version.substr(0, if1) !== "v") {
+  opt.version = "v" + o.version;
+}
+
+parts = ["img", "css", "less", "js"];
+
+opt.parts = _.filter(parts, function(part) {
+  return program[part];
+});
+
+if (_.isEmpty(o.parts)) {
+  opt.parts = parts;
+}
+
+opt.compress = [];
+
+if (program.compress || program.compressCss) {
+  opt.compress.push("css");
+}
+
+if (program.compress || program.compressJs) {
+  opt.compress.push("js");
+}
+
+opt.concat = [];
+
+if (program.concat) {
+  opt.concat.push("js");
+}
+
+if (program.fontAwesome) {
+  fa = opt["font-awesome"] = {};
+  if (program.fontPath) {
+    fa.path = program.fontPath;
+  }
+}
+
+opt.theme = program.theme || null;
+
+opt["variables.less"] = program.variables || null;
+
+/* work dir */
+
+
+dest = _.first(program.args);
+
+if (!dest) {
+  dest = "bootstrap";
+}
+
+/* pacjage manager */
+BFPM = new bricksPM(dest, opt);
+
+/* libs */
+scripts = _.map(["font-awesome", "bootswatch", "variables"], function(f) {
+  return path.join(__dirname, "../lib/", f);
+});
+
+if (program.script) {
+  scripts = scripts.concat(utils.split(program.script, ","));
+}
+
+_.each(scripts, function(f) {
+  var fp;
+
+  fp = path.resolve(process.cwd(), f);
+  return require(fp)(BFPM);
+});
+
+/* progress */
+bar = null;
+
+events = {
+  "folder-setup": "\nInitiating...\n",
+  "download-start": function() {
+    console.log("Downloading Bootstrap...");
+    return bar = new pb('[:bar] :percent :etas', {
+      width: 50,
+      total: 1,
+      incomplete: " "
+    });
+  },
+  "download": function(amt) {
+    return bar.tick(amt);
+  },
+  "download-end": "",
+  "unarchive": "Unpacking Bootstrap...\n",
+  "copy-parts": "Moving Files...\n",
+  "compile-js": "Compiling Javascript...",
+  "compile-css": "Compiling CSS...",
+  "cleanup": "\nCleaning Up...",
+  "fa-download-start": function() {
+    console.log("Downloading Font-Awesome...");
+    return bar = new pb('[:bar] :percent :etas', {
+      width: 50,
+      total: 1,
+      incomplete: " "
+    });
+  },
+  "fa-download": function(amt) {
+    return bar.tick(amt);
+  },
+  "fa-download-end": "",
+  "fa-unarchive": "Unpacking Font Awesome...\n",
+  "fa-copy-less": "Configuring Bootstrap for Font Awesome...",
+  "fa-copy-fonts": "Installing fonts...",
+  "theme-install": "Installing Bootswatch Theme '" + opt.theme + "'...",
+  "variables-copy": "Copying custom variables.less..."
+};
+
+_.each(events, function(e, name) {
+  var log;
+
+  if (_.isString(e)) {
+    log = e;
+    e = function() {
+      return console.log(log);
+    };
+  }
+  return BFPM.progress.on(name, e);
+});
+
+/* init */
+run = function() {
+  return BFPM.run(function(err) {
+    var time;
+
+    if (err) {
+      throw err;
+    } else {
+      time = Math.round((new Date - timer) / 1000);
+      console.log("\nDone in " + time + "s.");
+      return process.exit(0);
+    }
+  });
+};
+
+fs.exists(dest, function(exists) {
+  if (!exists) {
+    return run();
+  } else {
+    return fs.stat(dest, function(err, stat) {
+      if (err) {
+        throw err;
+      } else if (!stat.isDirectory()) {
+        return run();
+      } else {
+        return fs.rmdir(dest, function(err) {
+          if (err && err.code === "ENOTEMPTY") {
+            return program.confirm("Destination folder already exists and isn't empty. Continue? ", function(ok) {
+              if (ok) {
+                return run();
+              } else {
+                return process.exit(0);
+              }
+            });
+          } else if (err) {
+            throw err;
+          } else {
+            return run();
+          }
+        });
+      }
+    });
+  }
+});
+
+/* error */
+process.on('uncaughtException', function(err) {
+  console.log("\n\nBricks Package Manager crashed with the following error:\n");
+  console.error(err.stack);
+  return process.exit(1);
+});
